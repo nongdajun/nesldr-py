@@ -48,10 +48,12 @@ from ida_name import set_name
 from ida_entry import add_entry
 from ida_offset import op_offset
 from ida_lines import add_extra_line
-from ida_idaapi import get_inf_structure
+#from ida_idaapi import get_inf_structure  #Fix For IDA 9.0+
 from ida_nalt import get_root_filename
+import idaapi
 
-inf = get_inf_structure()
+
+#inf = get_inf_structure()
 
 
 def YES_NO(condition):
@@ -184,8 +186,9 @@ def load_ines_file(li):
 
 
 def create_filename_cmt():
-    add_extra_line(inf.min_ea, True, "File Name   : %s" % get_root_filename())
-    add_extra_line(inf.min_ea, True, "Format      : %s" % inf.filetype)
+    m_ea = idaapi.inf_get_min_ea()
+    add_extra_line(m_ea, True, "File Name   : %s" % get_root_filename())
+    add_extra_line(m_ea, True, "Format      : %s" % idaapi.inf_get_filetype())
 
 
 # ----------------------------------------------------------------------
@@ -635,20 +638,22 @@ def describe_rom_image():
     mapper = INES_MASK_MAPPER_VERSION(
         hdr.rom_control_byte_0, hdr.rom_control_byte_1)
 
-    add_extra_line(inf.min_ea, True, "\n;   ROM information\n"
+    m_ea = idaapi.inf_get_min_ea()
+
+    add_extra_line(m_ea, True, "\n;   ROM information\n"
                                      ";   ---------------\n;")
-    add_extra_line(inf.min_ea, True, ";   Valid image header      : %s" % YES_NO(not hdr.is_corrupt_ines_hdr()))
-    add_extra_line(inf.min_ea, True, ";   16K PRG-ROM page count  : %d" % hdr.prg_page_count_16k)
-    add_extra_line(inf.min_ea, True, ";   8K CHR-ROM page count   : %d" % hdr.chr_page_count_8k)
-    add_extra_line(inf.min_ea, True, ";   Mirroring               : %s" % (
+    add_extra_line(m_ea, True, ";   Valid image header      : %s" % YES_NO(not hdr.is_corrupt_ines_hdr()))
+    add_extra_line(m_ea, True, ";   16K PRG-ROM page count  : %d" % hdr.prg_page_count_16k)
+    add_extra_line(m_ea, True, ";   8K CHR-ROM page count   : %d" % hdr.chr_page_count_8k)
+    add_extra_line(m_ea, True, ";   Mirroring               : %s" % (
         "horizontal" if INES_MASK_H_MIRRORING(hdr.rom_control_byte_0) else "vertical"))
-    add_extra_line(inf.min_ea, True,
+    add_extra_line(m_ea, True,
                    ";   SRAM enabled            : %s" % YES_NO(INES_MASK_SRAM(hdr.rom_control_byte_0)))
-    add_extra_line(inf.min_ea, True,
+    add_extra_line(m_ea, True,
                    ";   512-byte trainer        : %s" % YES_NO(INES_MASK_TRAINER(hdr.rom_control_byte_0)))
-    add_extra_line(inf.min_ea, True,
+    add_extra_line(m_ea, True,
                    ";   Four screen VRAM layout : %s" % YES_NO(INES_MASK_VRAM_LAYOUT(hdr.rom_control_byte_0)))
-    add_extra_line(inf.min_ea, True,
+    add_extra_line(m_ea, True,
                    ";   Mapper                  : %s (Mapper #%d)" % (get_mapper_name(mapper), mapper))
 
 
@@ -716,9 +721,9 @@ def add_entry_points(li):
 def set_ida_export_data():
 
     # set entrypoint
-    inf.start_ip = inf.begin_ea = get_vector(RESET_VECTOR_START_ADDRESS)
+    idaapi.inf_set_start_ip(get_vector(RESET_VECTOR_START_ADDRESS))
 
     # set min_ea, maxEA, etc.
-    inf.start_cs = 0
-    inf.min_ea = RAM_START_ADDRESS
-    inf.max_ea = ROM_START_ADDRESS + ROM_SIZE
+    idaapi.inf_set_start_cs(0)
+    idaapi.inf_set_min_ea(RAM_START_ADDRESS)
+    idaapi.inf_set_max_ea(ROM_START_ADDRESS + ROM_SIZE)
